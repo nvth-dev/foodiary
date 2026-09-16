@@ -12,6 +12,8 @@ interface Env {
   POLICY_AUD?: string;
   ADMIN_EMAILS?: string;
   DEV_ADMIN_BYPASS?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
   IMAGES: {
     input(stream: ReadableStream): {
       transform(options: Record<string, unknown>): {

@@ -393,6 +393,7 @@ h1 em { color: var(--red); font-weight: 400; }
 .suggestion-form textarea { min-height: 132px; }
 .suggestion-form input:focus, .suggestion-form textarea:focus { border-color: var(--red); box-shadow: 0 0 0 2px color-mix(in srgb, var(--red) 18%, transparent); }
 .suggestion-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.suggestion-captcha { min-height: 65px; display: flex; align-items: center; }
 .suggestion-form-footer { min-height: 44px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; }
 .suggestion-feedback p { margin: 0; font-size: 10px; line-height: 1.5; }
 .suggestion-feedback .error { color: var(--danger); }

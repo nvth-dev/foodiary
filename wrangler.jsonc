@@ -6,6 +6,9 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "preview_urls": false,
+  "vars": {
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAE4_oRrNfEXWCs-P"
+  },
   "assets": {
     "directory": "dist/client",
     "not_found_handling": "none",

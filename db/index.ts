@@ -105,6 +105,8 @@ type Bindings = {
   ADMIN_EMAILS?: string;
   DEV_ADMIN_BYPASS?: string;
   SUGGESTION_RATE_LIMIT_SECRET?: string;
+  TURNSTILE_SITE_KEY?: string;
+  TURNSTILE_SECRET_KEY?: string;
 };
 
 let schemaReady: Promise<void> | null = null;

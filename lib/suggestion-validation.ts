@@ -17,7 +17,7 @@ export type SuggestionListOptions = {
 
 export type ParsedSuggestionSubmission =
   | { honeypot: true }
-  | { honeypot: false; formToken: string; input: SuggestionInput };
+  | { honeypot: false; formToken: string; turnstileToken: string; input: SuggestionInput };
 
 export function parseSuggestionSubmission(value: unknown): ParsedSuggestionSubmission {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -32,10 +32,14 @@ export function parseSuggestionSubmission(value: unknown): ParsedSuggestionSubmi
   if (typeof body.formToken !== "string" || !body.formToken.trim() || body.formToken.length > 300) {
     throw badRequest("Form góp ý không hợp lệ. Hãy tải lại trang rồi thử lại.");
   }
+  if (typeof body.turnstileToken !== "string" || !body.turnstileToken.trim() || body.turnstileToken.length > 4096) {
+    throw badRequest("Hãy xác nhận CAPTCHA trước khi gửi góp ý.");
+  }
 
   return {
     honeypot: false,
     formToken: body.formToken.trim(),
+    turnstileToken: body.turnstileToken.trim(),
     input: {
       username: optionalUsername(body.username),
       message: requiredMessage(body.message),

@@ -58,8 +58,25 @@ type MutationResponse = { error?: string; id?: string; deleted?: boolean; update
 type SuggestionResponse = {
   accepted?: boolean;
   formToken?: string;
+  turnstileSiteKey?: string;
   error?: string;
 };
+
+type TurnstileApi = {
+  render: (container: HTMLElement, options: {
+    sitekey: string;
+    callback: (token: string) => void;
+    "expired-callback": () => void;
+    "error-callback": () => void;
+  }) => string;
+  reset: (widgetId?: string) => void;
+};
+
+declare global {
+  interface Window {
+    turnstile?: TurnstileApi;
+  }
+}
 
 const acceptedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 const maxImageBytes = 8 * 1024 * 1024;
@@ -71,13 +88,19 @@ const fallbackAbout: BlogAbout = {
   body: "Một email nhỏ về quán mới, món ngon và những góc phố mình vừa đi qua.",
 };
 
-async function requestSuggestionFormToken(): Promise<string> {
+async function requestSuggestionFormConfig(): Promise<{ formToken: string; turnstileSiteKey: string }> {
   const response = await fetch("/api/suggestions", { headers: { accept: "application/json" } });
   const data = await response.json() as SuggestionResponse;
-  if (!response.ok || typeof data.formToken !== "string" || !data.formToken) {
+  if (
+    !response.ok
+    || typeof data.formToken !== "string"
+    || !data.formToken
+    || typeof data.turnstileSiteKey !== "string"
+    || !data.turnstileSiteKey
+  ) {
     throw new Error(data.error ?? "Chưa thể chuẩn bị form góp ý lúc này.");
   }
-  return data.formToken;
+  return { formToken: data.formToken, turnstileSiteKey: data.turnstileSiteKey };
 }
 
 function imageSelectionError(files: File[], totalFiles = files.length): string | null {
@@ -151,6 +174,10 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
   const [suggestionError, setSuggestionError] = useState("");
   const [suggestionSuccess, setSuggestionSuccess] = useState("");
   const [suggestionFormToken, setSuggestionFormToken] = useState("");
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState("");
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileContainerRef = useRef<HTMLDivElement | null>(null);
+  const turnstileWidgetId = useRef<string | null>(null);
   const selectedPreviews = useMemo(
     () => selectedFiles.map((file) => ({ file, url: URL.createObjectURL(file) })),
     [selectedFiles],
@@ -219,9 +246,12 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
   useEffect(() => {
     if (adminMode) return;
     let cancelled = false;
-    requestSuggestionFormToken()
-      .then((token) => {
-        if (!cancelled) setSuggestionFormToken(token);
+    requestSuggestionFormConfig()
+      .then(({ formToken, turnstileSiteKey: siteKey }) => {
+        if (!cancelled) {
+          setSuggestionFormToken(formToken);
+          setTurnstileSiteKey(siteKey);
+        }
       })
       .catch((error) => {
         if (!cancelled) setSuggestionError(error instanceof Error ? error.message : "Chưa thể chuẩn bị form góp ý lúc này.");
@@ -230,6 +260,47 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
       cancelled = true;
     };
   }, [adminMode]);
+
+  useEffect(() => {
+    if (adminMode || !turnstileSiteKey || !turnstileContainerRef.current) return;
+    let cancelled = false;
+    let script: HTMLScriptElement | null = null;
+    const renderWidget = () => {
+      if (cancelled || !turnstileContainerRef.current || !window.turnstile || turnstileWidgetId.current !== null) return;
+      turnstileWidgetId.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: turnstileSiteKey,
+        callback: (token) => {
+          setTurnstileToken(token);
+          setSuggestionError("");
+        },
+        "expired-callback": () => setTurnstileToken(""),
+        "error-callback": () => {
+          setTurnstileToken("");
+          setSuggestionError("Không thể xác minh CAPTCHA. Hãy thử lại.");
+        },
+      });
+    };
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      script = document.querySelector<HTMLScriptElement>("script[data-turnstile]");
+      if (!script) {
+        script = document.createElement("script");
+        script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        script.async = true;
+        script.defer = true;
+        script.dataset.turnstile = "true";
+        document.head.appendChild(script);
+      }
+      script.addEventListener("load", renderWidget);
+    }
+
+    return () => {
+      cancelled = true;
+      script?.removeEventListener("load", renderWidget);
+    };
+  }, [adminMode, turnstileSiteKey]);
 
   useEffect(
     () => () => selectedPreviews.forEach((preview) => URL.revokeObjectURL(preview.url)),
@@ -316,9 +387,15 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
     const username = String(fields.get("username") ?? "").trim();
     const message = String(fields.get("message") ?? "").trim();
     const formToken = String(fields.get("formToken") ?? "").trim();
+    const captchaToken = String(fields.get("turnstileToken") ?? "").trim();
 
     if (!formToken) {
       setSuggestionError("Form góp ý đã hết hạn. Hãy tải lại trang rồi thử lại.");
+      setSuggestionSuccess("");
+      return;
+    }
+    if (!captchaToken) {
+      setSuggestionError("Hãy xác nhận CAPTCHA trước khi gửi góp ý.");
       setSuggestionSuccess("");
       return;
     }
@@ -355,6 +432,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
           username: username || null,
           message,
           formToken,
+          turnstileToken: captchaToken,
           website: String(fields.get("website") ?? ""),
         }),
       });
@@ -364,7 +442,14 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
       }
       form.reset();
       setSuggestionFormToken("");
-      void requestSuggestionFormToken().then(setSuggestionFormToken).catch(() => undefined);
+      setTurnstileToken("");
+      if (turnstileWidgetId.current !== null) window.turnstile?.reset(turnstileWidgetId.current);
+      void requestSuggestionFormConfig()
+        .then(({ formToken: nextFormToken, turnstileSiteKey: nextSiteKey }) => {
+          setSuggestionFormToken(nextFormToken);
+          setTurnstileSiteKey(nextSiteKey);
+        })
+        .catch(() => undefined);
       setSuggestionSuccess("Đã gửi rồi — cảm ơn bạn đã gợi ý một quán mới!");
     } catch (error) {
       setSuggestionError(error instanceof Error ? error.message : "Chưa thể gửi góp ý lúc này.");
@@ -769,6 +854,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
           </div>
           <form className="suggestion-form" onSubmit={handleSuggestionSubmit}>
             <input name="formToken" type="hidden" value={suggestionFormToken} readOnly />
+            <input name="turnstileToken" type="hidden" value={turnstileToken} readOnly />
             <label htmlFor="suggestion-username">
               <span>Username <small>không bắt buộc</small></span>
               <input
@@ -796,6 +882,9 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
             <div className="suggestion-honeypot" aria-hidden="true">
               <label htmlFor="suggestion-website">Website</label>
               <input id="suggestion-website" name="website" tabIndex={-1} autoComplete="off" />
+            </div>
+            <div className="suggestion-captcha" aria-label="Xác minh CAPTCHA">
+              <div ref={turnstileContainerRef} />
             </div>
             <div className="suggestion-form-footer">
               <div className="suggestion-feedback" aria-live="polite">

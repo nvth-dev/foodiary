@@ -1,6 +1,7 @@
 import { consumeSuggestionFormToken, createSuggestion, getBindings, hasD1Database, issueSuggestionFormToken } from "@/db";
 import { buildSuggestionAbuseContext } from "@/lib/suggestion-abuse";
 import { parseSuggestionSubmission } from "@/lib/suggestion-validation";
+import { verifyTurnstileToken } from "@/lib/turnstile";
 
 export const dynamic = "force-dynamic";
 const MAX_REQUEST_BYTES = 16 * 1024;
@@ -14,8 +15,16 @@ export async function GET() {
   }
 
   try {
-    const formToken = await issueSuggestionFormToken(getBindings().SUGGESTION_RATE_LIMIT_SECRET);
-    return Response.json({ formToken }, { headers: { "Cache-Control": "no-store" } });
+    const bindings = getBindings();
+    const turnstileSiteKey = bindings.TURNSTILE_SITE_KEY?.trim();
+    if (!turnstileSiteKey || !bindings.TURNSTILE_SECRET_KEY?.trim()) {
+      return Response.json(
+        { error: "CAPTCHA góp ý chưa được cấu hình." },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    const formToken = await issueSuggestionFormToken(bindings.SUGGESTION_RATE_LIMIT_SECRET);
+    return Response.json({ formToken, turnstileSiteKey }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     return publicErrorResponse(error);
   }
@@ -37,7 +46,11 @@ export async function POST(request: Request) {
       );
     }
 
-    await consumeSuggestionFormToken(submission.formToken, getBindings().SUGGESTION_RATE_LIMIT_SECRET);
+    const bindings = getBindings();
+    if (!await verifyTurnstileToken(submission.turnstileToken, request, bindings.TURNSTILE_SECRET_KEY)) {
+      throw requestError("Hãy xác nhận CAPTCHA trước khi gửi góp ý.", 403);
+    }
+    await consumeSuggestionFormToken(submission.formToken, bindings.SUGGESTION_RATE_LIMIT_SECRET);
     const abuse = await buildSuggestionAbuseContext(
       request,
       submission.input,
@@ -91,11 +104,6 @@ async function readJson(request: Request): Promise<unknown> {
   }
 }
 
-function requestError(message: string, status: number): Error {
-  const error = new Error(message);
-  Object.assign(error, { status });
-  return error;
-}
 
 function publicErrorResponse(error: unknown): Response {
   const rawStatus =
@@ -120,4 +128,10 @@ function publicErrorResponse(error: unknown): Response {
     { error: message },
     { status, headers },
   );
+}
+
+function requestError(message: string, status: number): Error {
+  const error = new Error(message);
+  Object.assign(error, { status });
+  return error;
 }

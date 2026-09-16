@@ -118,6 +118,8 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(publicSuggestionRoute, /export async function GET/);
   assert.match(publicSuggestionRoute, /buildSuggestionAbuseContext/);
   assert.match(publicSuggestionRoute, /consumeSuggestionFormToken/);
+  assert.match(publicSuggestionRoute, /verifyTurnstileToken/);
+  assert.match(publicSuggestionRoute, /TURNSTILE_SECRET_KEY/);
   assert.match(publicSuggestionRoute, /MAX_REQUEST_BYTES/);
   assert.match(publicSuggestionRoute, /Retry-After/);
   assert.match(adminSuggestionRoute, /requireAdmin\(request\)/);
@@ -146,6 +148,9 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(publicPage, /Có mì chính/);
   assert.match(publicPage, /selected\.hasMsg/);
   assert.match(publicPage, /suggestionFormToken/);
+  assert.match(publicPage, /turnstileSiteKey/);
   assert.match(envExample, /ADMIN_EMAILS=/);
   assert.match(envExample, /SUGGESTION_RATE_LIMIT_SECRET=/);
+  assert.match(envExample, /TURNSTILE_SITE_KEY=/);
+  assert.match(envExample, /TURNSTILE_SECRET_KEY=/);
 });
