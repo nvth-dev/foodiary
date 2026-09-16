@@ -17,6 +17,8 @@ test("ships the Vietnamese food journal experience", async () => {
   assert.match(page, /\/api\/suggestions/);
   assert.match(page, /Góp ý quán mới/i);
   assert.match(page, /name="hashtags"/);
+  assert.match(page, /name="isDraft"/);
+  assert.match(page, /status: fields\.get\("isDraft"\)/);
   assert.match(page, /#hashtag/i);
   assert.match(page, /matchesSearchQuery/);
   assert.match(page, /searchHashtag/);
@@ -124,10 +126,14 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(database, /postedAt: row\.created_at/);
   assert.doesNotMatch(database, /INSERT INTO reviews[\s\S]{0,300}visited_at/);
   assert.match(database, /reviews_status_created_idx/);
+  assert.match(database, /export async function listAdminSpots/);
+  assert.match(database, /status: row\.status/);
+  assert.match(database, /input\.status/);
   assert.match(database, /ON CONFLICT\(fingerprint\) DO UPDATE/);
   assert.match(database, /SUGGESTION_RATE_LIMIT_MAX/);
   assert.match(database, /ORDER BY reviews\.is_featured DESC, reviews\.created_at DESC/);
   assert.match(adminDashboard, /Ngày giờ đăng/);
+  assert.match(adminDashboard, /Bản nháp/);
   assert.match(adminAuth, /getAdminState\(request\)/);
   assert.match(adminAuth, /redirect\("\/"\)/);
   assert.match(publicPage, /return <FoodBlog \/>/);

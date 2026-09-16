@@ -29,7 +29,7 @@ export default function AdminDashboard({ initialSpots }: { initialSpots: Publish
   }, [query, spots]);
 
   const areaCount = new Set(spots.map((spot) => spot.area)).size;
-  const featuredCount = spots.filter((spot) => spot.featured).length;
+  const featuredCount = spots.filter((spot) => spot.featured && spot.status === "published").length;
 
   async function deletePost(spot: PublishedSpot) {
     if (!window.confirm(`Xóa bài “${spot.name}” cùng toàn bộ ảnh?`)) return;
@@ -78,7 +78,7 @@ export default function AdminDashboard({ initialSpots }: { initialSpots: Publish
                     <td>{spot.area}</td>
                     <td><span className="admin-rating">★ {spot.rating.toFixed(1)}</span></td>
                     <td><AdminPostTimestamp value={spot.postedAt} /></td>
-                    <td><span className={spot.featured ? "admin-status featured" : "admin-status"}>{spot.featured ? "Nổi bật" : "Đã đăng"}</span></td>
+                    <td><span className={spot.status === "draft" ? "admin-status draft" : spot.featured ? "admin-status featured" : "admin-status"}>{spot.status === "draft" ? "Bản nháp" : spot.featured ? "Nổi bật" : "Đã đăng"}</span></td>
                     <td><div className="admin-row-actions"><a href={`/admin/editor?id=${encodeURIComponent(spot.id)}`}>Sửa</a><button onClick={() => deletePost(spot)} disabled={deletingId === spot.id}>{deletingId === spot.id ? "Đang xóa" : "Xóa"}</button></div></td>
                   </tr>
                 ))}

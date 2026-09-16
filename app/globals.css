@@ -157,6 +157,7 @@ a { color: inherit; text-decoration: none; }
 .admin-posted-at { color: var(--text-secondary); white-space: nowrap; }
 .admin-status { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: var(--success-bg); color: var(--success); font-size: 8px; font-weight: 700; }
 .admin-status.featured { background: var(--danger-bg); color: var(--danger); }
+.admin-status.draft { background: var(--warning-bg); color: var(--warning); }
 .admin-row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
 .admin-row-actions a, .admin-row-actions button { padding: 6px 9px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--green); font-size: 9px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .admin-row-actions button { color: var(--danger); }

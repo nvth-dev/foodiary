@@ -39,6 +39,7 @@ export type ReviewInput = {
   hasMsg: boolean;
   isFavorite: boolean;
   isFeatured: boolean;
+  status: "draft" | "published";
   dishes: Array<{ name: string; photoIndex: number }>;
   photoKeys: Array<{
     objectKey: string;
@@ -75,6 +76,7 @@ export type PublishedSpot = {
   postedAt: string;
   favorite: boolean;
   featured: boolean;
+  status: "draft" | "published";
   dishes: Array<{ id: string; name: string; photoIndex: number }>;
 };
 
@@ -528,6 +530,7 @@ type ReviewRow = {
   is_favorite: number;
   is_featured: number;
   has_msg: number;
+  status: "draft" | "published";
 };
 
 type PhotoRow = {
@@ -663,6 +666,14 @@ function throwCategoryConflict(error: unknown): never {
 }
 
 export async function listPublishedSpots(): Promise<PublishedSpot[]> {
+  return listReviewSpots(false);
+}
+
+export async function listAdminSpots(): Promise<PublishedSpot[]> {
+  return listReviewSpots(true);
+}
+
+async function listReviewSpots(includeDrafts: boolean): Promise<PublishedSpot[]> {
   await ensureDatabase();
   const db = getD1();
   const [reviewsResult, photosResult, dishesResult] = await Promise.all([
@@ -682,11 +693,12 @@ export async function listPublishedSpots(): Promise<PublishedSpot[]> {
       reviews.has_msg,
       reviews.created_at,
       reviews.is_favorite,
-      reviews.is_featured
+      reviews.is_featured,
+      reviews.status
     FROM reviews
     INNER JOIN restaurants ON restaurants.id = reviews.restaurant_id
     LEFT JOIN cuisine_categories ON cuisine_categories.id = restaurants.category_id
-    WHERE reviews.status = 'published'
+    ${includeDrafts ? "" : "WHERE reviews.status = 'published'"}
     ORDER BY reviews.is_featured DESC, reviews.created_at DESC`).all<ReviewRow>(),
     db.prepare("SELECT review_id, object_key, alt_text, content_type, size_bytes FROM photos ORDER BY review_id, sort_order, created_at").all<PhotoRow>(),
     db.prepare("SELECT id, review_id, name, photo_sort_order FROM review_dishes ORDER BY review_id, sort_order, created_at").all<DishRow>(),
@@ -735,6 +747,7 @@ export async function listPublishedSpots(): Promise<PublishedSpot[]> {
       postedAt: row.created_at,
       favorite: Boolean(row.is_favorite),
       featured: Boolean(row.is_featured),
+      status: row.status,
       dishes: dishesByReview.get(row.id) ?? [{ id: `${row.id}-primary`, name: row.dish, photoIndex: 0 }],
     };
   });
@@ -756,7 +769,7 @@ export async function createReview(input: ReviewInput): Promise<string> {
       .bind(restaurantId, input.name, slug, input.area, input.address, category.name, category.id, input.priceLabel),
     db.prepare(`INSERT INTO reviews
       (id, restaurant_id, dish, rating, excerpt, content, hashtags, has_msg, is_favorite, is_featured, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'published')`)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .bind(
         reviewId,
         restaurantId,
@@ -768,6 +781,7 @@ export async function createReview(input: ReviewInput): Promise<string> {
         input.hasMsg ? 1 : 0,
         input.isFavorite ? 1 : 0,
         input.isFeatured ? 1 : 0,
+        input.status,
       ),
     ...input.photoKeys.map((photo, index) =>
       db.prepare(`INSERT INTO photos
@@ -855,7 +869,7 @@ export async function updateReview(reviewId: string, input: ReviewInput): Promis
       ),
     db.prepare(`UPDATE reviews SET
       dish = ?, rating = ?, excerpt = ?, content = ?, hashtags = ?,
-      has_msg = ?, is_favorite = ?, is_featured = ?, updated_at = CURRENT_TIMESTAMP
+      has_msg = ?, is_favorite = ?, is_featured = ?, status = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?`)
       .bind(
         input.dish,
@@ -866,6 +880,7 @@ export async function updateReview(reviewId: string, input: ReviewInput): Promis
         input.hasMsg ? 1 : 0,
         input.isFavorite ? 1 : 0,
         input.isFeatured ? 1 : 0,
+        input.status,
         reviewId,
       ),
     db.prepare("DELETE FROM photos WHERE review_id = ?").bind(reviewId),

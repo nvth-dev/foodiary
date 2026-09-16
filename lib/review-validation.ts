@@ -20,9 +20,13 @@ export function parseReviewInput(value: unknown): ReviewInput {
   const rawDishes = Array.isArray(input.dishes) && input.dishes.length
     ? input.dishes
     : [{ name: input.dish, photoIndex: 0 }];
+  const status = input.status === undefined ? "published" : input.status;
 
   if (rating < 1 || rating > 5 || !Number.isInteger(rating * 2)) {
     throw badRequest("Điểm đánh giá phải từ 1 đến 5, theo bước 0,5.");
+  }
+  if (status !== "draft" && status !== "published") {
+    throw badRequest("Trạng thái bài viết không hợp lệ.");
   }
   if (photos.length < 1 || photos.length > MAX_REVIEW_PHOTOS) {
     throw badRequest("Mỗi bài review cần từ 1 đến 5 ảnh.");
@@ -46,6 +50,7 @@ export function parseReviewInput(value: unknown): ReviewInput {
     hasMsg: input.hasMsg === true,
     isFavorite: Boolean(input.isFavorite),
     isFeatured: Boolean(input.isFeatured),
+    status,
     dishes,
     photoKeys: photos.map((photo, index) => parsePhoto(photo, index)),
   };

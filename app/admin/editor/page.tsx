@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { listCategories, listPublishedSpots } from "@/db";
+import { listAdminSpots, listCategories } from "@/db";
 import { requireAdminPage } from "@/lib/admin-page-auth";
 import { FoodBlog } from "../../page";
 
@@ -15,7 +15,7 @@ export default async function EditorPage({ searchParams }: { searchParams: Promi
   await requireAdminPage("/admin/editor");
   const { id } = await searchParams;
   const [spots, categories] = await Promise.all([
-    id ? listPublishedSpots() : Promise.resolve([]),
+    id ? listAdminSpots() : Promise.resolve([]),
     listCategories(),
   ]);
   const spot = id ? spots.find((item) => item.id === id) : null;

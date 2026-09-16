@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { listPublishedSpots } from "@/db";
+import { listAdminSpots } from "@/db";
 import { requireAdminPage } from "@/lib/admin-page-auth";
 import AdminDashboard from "./admin-dashboard";
 
@@ -12,6 +12,6 @@ export const metadata: Metadata = {
 
 export default async function AdminPage() {
   await requireAdminPage("/admin");
-  const spots = await listPublishedSpots();
+  const spots = await listAdminSpots();
   return <AdminDashboard initialSpots={spots} />;
 }

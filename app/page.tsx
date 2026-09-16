@@ -37,6 +37,7 @@ export type Spot = {
   postedAt?: string;
   favorite?: boolean;
   featured?: boolean;
+  status?: "draft" | "published";
   dishes?: ReviewDish[];
   hashtags?: string[];
   hasMsg?: boolean;
@@ -426,6 +427,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
           hasMsg: fields.get("hasMsg") === "on",
           isFavorite: fields.get("isFavorite") === "on",
           isFeatured: fields.get("isFeatured") === "on",
+          status: fields.get("isDraft") === "on" ? "draft" : "published",
           hashtags,
           photoKeys,
         }),
@@ -1123,6 +1125,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
                 <label><input name="hasMsg" type="checkbox" defaultChecked={editingSpot?.hasMsg} /> Có mì chính</label>
                 <label><input name="isFavorite" type="checkbox" defaultChecked={editingSpot?.favorite} /> Quán yêu thích</label>
                 <label><input name="isFeatured" type="checkbox" defaultChecked={editingSpot?.featured} /> Đưa lên bài nổi bật</label>
+                <label><input name="isDraft" type="checkbox" defaultChecked={editingSpot?.status === "draft"} /> Lưu làm bản nháp (chưa hiển thị công khai)</label>
               </div>
               {formError && <p className="form-error" role="alert">{formError}</p>}
               <button className="submit-button" type="submit" disabled={isSubmitting || saved || !managedCategories.length}>

@@ -11,6 +11,7 @@ Blog ẩm thực cá nhân chạy trên Vinext và Cloudflare Workers. Nội dun
 - `app/api/suggestions`: nhận góp ý quán mới từ độc giả.
 - `app/api/admin/*`: upload ảnh và thao tác ghi có kiểm tra email tác giả.
 - `/admin`: giao diện quản lý bài viết, loại món, góp ý và phần giới thiệu dành riêng cho tác giả.
+- Bài review có thể được lưu ở trạng thái bản nháp; bản nháp chỉ xuất hiện trong `/admin` và không được trả về trang công khai.
 - `app/api/media`: đọc ảnh từ R2 với cache dài hạn.
 - `wrangler.jsonc`: cấu hình deploy trực tiếp Worker, static assets, D1, R2 và Cloudflare Images.
 - `.openai/hosting.json`: metadata tương thích với bản preview Cloudflare Sites.
