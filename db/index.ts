@@ -11,8 +11,12 @@ import {
   SUGGESTION_DAILY_LIMIT_HOURS,
   SUGGESTION_DAILY_LIMIT_MAX,
   SUGGESTION_DUPLICATE_HOURS,
+  SUGGESTION_FORM_TOKEN_TTL_MINUTES,
+  createSuggestionFormToken,
+  hashSuggestionFormToken,
   SUGGESTION_RATE_LIMIT_MAX,
   SUGGESTION_RATE_LIMIT_MINUTES,
+  validateSuggestionFormToken,
   type SuggestionAbuseContext,
 } from "@/lib/suggestion-abuse";
 
@@ -208,6 +212,12 @@ async function initializeDatabase(db: D1Database): Promise<void> {
       duplicate_attempt INTEGER NOT NULL DEFAULT 0,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )`),
+    db.prepare(`CREATE TABLE IF NOT EXISTS suggestion_form_tokens (
+      token_hash TEXT PRIMARY KEY NOT NULL,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`),
     db.prepare(`CREATE TABLE IF NOT EXISTS photos (
       id TEXT PRIMARY KEY NOT NULL,
       review_id TEXT NOT NULL REFERENCES reviews(id) ON DELETE CASCADE,
@@ -233,6 +243,7 @@ async function initializeDatabase(db: D1Database): Promise<void> {
     db.prepare("CREATE INDEX IF NOT EXISTS reviews_status_created_idx ON reviews(status, is_featured, created_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS suggestions_created_idx ON suggestions(created_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS suggestions_status_created_idx ON suggestions(status, created_at)"),
+    db.prepare("CREATE INDEX IF NOT EXISTS suggestion_form_tokens_expires_idx ON suggestion_form_tokens(expires_at)"),
     db.prepare("CREATE INDEX IF NOT EXISTS photos_review_sort_idx ON photos(review_id, sort_order)"),
     db.prepare("CREATE INDEX IF NOT EXISTS review_dishes_review_sort_idx ON review_dishes(review_id, sort_order)"),
   ]);
@@ -390,6 +401,35 @@ export async function createSuggestion(
     VALUES (?, ?, ?, 'unread')`)
     .bind(id, input.username, input.message)
     .run();
+}
+
+export async function issueSuggestionFormToken(secret: string | undefined): Promise<string> {
+  await ensureDatabase();
+  const db = getD1();
+  const token = await createSuggestionFormToken(secret);
+  const tokenHash = await hashSuggestionFormToken(token);
+  await db.batch([
+    db.prepare("DELETE FROM suggestion_form_tokens WHERE used_at IS NOT NULL OR expires_at <= CURRENT_TIMESTAMP"),
+    db.prepare(`INSERT INTO suggestion_form_tokens (token_hash, expires_at)
+      VALUES (?, datetime('now', '+' || ? || ' minutes'))`)
+      .bind(tokenHash, SUGGESTION_FORM_TOKEN_TTL_MINUTES),
+  ]);
+  return token;
+}
+
+export async function consumeSuggestionFormToken(token: string, secret: string | undefined): Promise<void> {
+  const tokenHash = await validateSuggestionFormToken(token, secret);
+  if (!tokenHash) throw httpError("Form góp ý không hợp lệ hoặc đã hết hạn. Hãy tải lại trang.", 403);
+
+  await ensureDatabase();
+  const consumed = await getD1()
+    .prepare(`UPDATE suggestion_form_tokens
+      SET used_at = CURRENT_TIMESTAMP
+      WHERE token_hash = ? AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+      RETURNING token_hash`)
+    .bind(tokenHash)
+    .first<{ token_hash: string }>();
+  if (!consumed) throw httpError("Form góp ý đã được dùng hoặc đã hết hạn. Hãy tải lại trang.", 403);
 }
 
 export async function listSuggestions(options: SuggestionListOptions): Promise<Suggestion[]> {

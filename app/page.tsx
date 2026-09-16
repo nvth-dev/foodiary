@@ -57,6 +57,7 @@ type UploadResponse = {
 type MutationResponse = { error?: string; id?: string; deleted?: boolean; updated?: boolean };
 type SuggestionResponse = {
   accepted?: boolean;
+  formToken?: string;
   error?: string;
 };
 
@@ -69,6 +70,15 @@ const fallbackAbout: BlogAbout = {
   title: "Mỗi tuần một câu chuyện ngon.",
   body: "Một email nhỏ về quán mới, món ngon và những góc phố mình vừa đi qua.",
 };
+
+async function requestSuggestionFormToken(): Promise<string> {
+  const response = await fetch("/api/suggestions", { headers: { accept: "application/json" } });
+  const data = await response.json() as SuggestionResponse;
+  if (!response.ok || typeof data.formToken !== "string" || !data.formToken) {
+    throw new Error(data.error ?? "Chưa thể chuẩn bị form góp ý lúc này.");
+  }
+  return data.formToken;
+}
 
 function imageSelectionError(files: File[], totalFiles = files.length): string | null {
   if (totalFiles > 5) return "Chỉ được dùng tối đa 5 ảnh.";
@@ -140,6 +150,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
   const [isSuggestionSending, setIsSuggestionSending] = useState(false);
   const [suggestionError, setSuggestionError] = useState("");
   const [suggestionSuccess, setSuggestionSuccess] = useState("");
+  const [suggestionFormToken, setSuggestionFormToken] = useState("");
   const selectedPreviews = useMemo(
     () => selectedFiles.map((file) => ({ file, url: URL.createObjectURL(file) })),
     [selectedFiles],
@@ -199,6 +210,21 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
       .catch(() => {
         setReviewsLoaded(true);
         setCategoriesLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [adminMode]);
+
+  useEffect(() => {
+    if (adminMode) return;
+    let cancelled = false;
+    requestSuggestionFormToken()
+      .then((token) => {
+        if (!cancelled) setSuggestionFormToken(token);
+      })
+      .catch((error) => {
+        if (!cancelled) setSuggestionError(error instanceof Error ? error.message : "Chưa thể chuẩn bị form góp ý lúc này.");
       });
     return () => {
       cancelled = true;
@@ -289,6 +315,13 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
     const fields = new FormData(form);
     const username = String(fields.get("username") ?? "").trim();
     const message = String(fields.get("message") ?? "").trim();
+    const formToken = String(fields.get("formToken") ?? "").trim();
+
+    if (!formToken) {
+      setSuggestionError("Form góp ý đã hết hạn. Hãy tải lại trang rồi thử lại.");
+      setSuggestionSuccess("");
+      return;
+    }
 
     if (username.length > maxSuggestionUsernameLength) {
       setSuggestionError(`Tên hiển thị không được quá ${maxSuggestionUsernameLength} ký tự.`);
@@ -321,6 +354,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
         body: JSON.stringify({
           username: username || null,
           message,
+          formToken,
           website: String(fields.get("website") ?? ""),
         }),
       });
@@ -329,6 +363,8 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
         throw new Error(data.error ?? "Chưa thể gửi góp ý lúc này.");
       }
       form.reset();
+      setSuggestionFormToken("");
+      void requestSuggestionFormToken().then(setSuggestionFormToken).catch(() => undefined);
       setSuggestionSuccess("Đã gửi rồi — cảm ơn bạn đã gợi ý một quán mới!");
     } catch (error) {
       setSuggestionError(error instanceof Error ? error.message : "Chưa thể gửi góp ý lúc này.");
@@ -732,6 +768,7 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
             <p>Để lại một cái tên bất kỳ và quán bạn muốn mình thử. Mình sẽ đọc trong trang quản trị.</p>
           </div>
           <form className="suggestion-form" onSubmit={handleSuggestionSubmit}>
+            <input name="formToken" type="hidden" value={suggestionFormToken} readOnly />
             <label htmlFor="suggestion-username">
               <span>Username <small>không bắt buộc</small></span>
               <input

@@ -97,6 +97,7 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(schema, /sqliteTable\(\s*"blog_settings"/);
   assert.match(schema, /sqliteTable\(\s*"suggestions"/);
   assert.match(schema, /sqliteTable\(\s*"suggestion_rate_limits"/);
+  assert.match(schema, /sqliteTable\(\s*"suggestion_form_tokens"/);
   assert.match(schema, /hashtags: text\("hashtags"/);
   assert.match(schema, /hasMsg: integer\("has_msg"/);
   assert.doesNotMatch(schema, /visitedAt|visited_at/);
@@ -106,13 +107,17 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(msgMigration, /ALTER TABLE `reviews` ADD `has_msg`/);
   assert.match(suggestionAbuse, /HMAC/);
   assert.match(suggestionAbuse, /cf-connecting-ip/);
+  assert.match(suggestionAbuse, /createSuggestionFormToken/);
+  assert.match(suggestionAbuse, /validateSuggestionFormToken/);
   assert.match(adminRoute, /requireAdmin\(request\)/);
   assert.match(categoryRoute, /requireAdmin\(request\)/);
   assert.match(publicCategoryRoute, /listCategories/);
   assert.match(adminAboutRoute, /requireAdmin\(request\)/);
   assert.match(publicAboutRoute, /getBlogAbout/);
   assert.match(publicSuggestionRoute, /export async function POST/);
+  assert.match(publicSuggestionRoute, /export async function GET/);
   assert.match(publicSuggestionRoute, /buildSuggestionAbuseContext/);
+  assert.match(publicSuggestionRoute, /consumeSuggestionFormToken/);
   assert.match(publicSuggestionRoute, /MAX_REQUEST_BYTES/);
   assert.match(publicSuggestionRoute, /Retry-After/);
   assert.match(adminSuggestionRoute, /requireAdmin\(request\)/);
@@ -130,6 +135,7 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(database, /status: row\.status/);
   assert.match(database, /input\.status/);
   assert.match(database, /ON CONFLICT\(fingerprint\) DO UPDATE/);
+  assert.match(database, /suggestion_form_tokens/);
   assert.match(database, /SUGGESTION_RATE_LIMIT_MAX/);
   assert.match(database, /ORDER BY reviews\.is_featured DESC, reviews\.created_at DESC/);
   assert.match(adminDashboard, /Ngày giờ đăng/);
@@ -139,6 +145,7 @@ test("declares Cloudflare-native persistence and protected mutations", async () 
   assert.match(publicPage, /return <FoodBlog \/>/);
   assert.match(publicPage, /Có mì chính/);
   assert.match(publicPage, /selected\.hasMsg/);
+  assert.match(publicPage, /suggestionFormToken/);
   assert.match(envExample, /ADMIN_EMAILS=/);
   assert.match(envExample, /SUGGESTION_RATE_LIMIT_SECRET=/);
 });

@@ -1,9 +1,25 @@
-import { createSuggestion, getBindings, hasD1Database } from "@/db";
+import { consumeSuggestionFormToken, createSuggestion, getBindings, hasD1Database, issueSuggestionFormToken } from "@/db";
 import { buildSuggestionAbuseContext } from "@/lib/suggestion-abuse";
 import { parseSuggestionSubmission } from "@/lib/suggestion-validation";
 
 export const dynamic = "force-dynamic";
 const MAX_REQUEST_BYTES = 16 * 1024;
+
+export async function GET() {
+  if (!hasD1Database()) {
+    return Response.json(
+      { error: "Dịch vụ góp ý tạm thời chưa sẵn sàng." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  try {
+    const formToken = await issueSuggestionFormToken(getBindings().SUGGESTION_RATE_LIMIT_SECRET);
+    return Response.json({ formToken }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return publicErrorResponse(error);
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +37,7 @@ export async function POST(request: Request) {
       );
     }
 
+    await consumeSuggestionFormToken(submission.formToken, getBindings().SUGGESTION_RATE_LIMIT_SECRET);
     const abuse = await buildSuggestionAbuseContext(
       request,
       submission.input,

@@ -95,6 +95,17 @@ export const suggestionRateLimits = sqliteTable("suggestion_rate_limits", {
   updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
+export const suggestionFormTokens = sqliteTable(
+  "suggestion_form_tokens",
+  {
+    tokenHash: text("token_hash").primaryKey(),
+    expiresAt: text("expires_at").notNull(),
+    usedAt: text("used_at"),
+    createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  },
+  (table) => [index("suggestion_form_tokens_expires_idx").on(table.expiresAt)],
+);
+
 export const photos = sqliteTable(
   "photos",
   {
