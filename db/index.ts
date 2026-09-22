@@ -26,7 +26,7 @@ export type BlogAbout = AboutInput;
 
 export const DEFAULT_BLOG_ABOUT: BlogAbout = Object.freeze({
   title: "Mỗi tuần một câu chuyện ngon.",
-  body: "Một email nhỏ về quán mới, món ngon và những góc phố mình vừa đi qua.",
+  body: "Trên con đường trở thành food reviewer không có dấu chân của kẻ lười ăn uống.",
 });
 
 export type ReviewInput = {

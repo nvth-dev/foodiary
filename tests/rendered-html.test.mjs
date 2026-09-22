@@ -26,9 +26,22 @@ test("ships the Vietnamese food journal experience", async () => {
   assert.match(page, /PostTimestamp/);
   assert.doesNotMatch(page, /Ngày ghé quán|name="visitedAt"/i);
   assert.match(page, /Về blog/i);
+  assert.match(page, /Trên con đường trở thành food reviewer không có dấu chân của kẻ lười ăn uống/);
   assert.match(page, /reviewsLoaded/);
   assert.doesNotMatch(page, /Bếp Nhà Xứ Quảng|Phở Thìn 13 Lò Đúc|Pizza 4P/i);
   assert.doesNotMatch(page, /codex-preview|Your site is taking shape|react-loading-skeleton/i);
+});
+
+test("updates only the previous default Về blog quote", async () => {
+  const [database, seed, migration] = await Promise.all([
+    readFile(new URL("../db/index.ts", import.meta.url), "utf8"),
+    readFile(new URL("../scripts/seed-production.sql", import.meta.url), "utf8"),
+    readFile(new URL("../drizzle/0009_food_reviewer_quote.sql", import.meta.url), "utf8"),
+  ]);
+
+  assert.match(database, /Trên con đường trở thành food reviewer không có dấu chân của kẻ lười ăn uống/);
+  assert.match(seed, /Trên con đường trở thành food reviewer không có dấu chân của kẻ lười ăn uống/);
+  assert.match(migration, /WHERE `id` = 'main'\s+AND `about_body` = 'Một email nhỏ về quán mới, món ngon và những góc phố mình vừa đi qua\.'/);
 });
 
 test("provides a persistent system-aware night mode across public and admin views", async () => {

@@ -3,7 +3,7 @@ PRAGMA foreign_keys = ON;
 UPDATE `blog_settings`
 SET
   `about_title` = 'Mỗi tuần một câu chuyện ngon.',
-  `about_body` = 'Một email nhỏ về quán mới, món ngon và những góc phố mình vừa đi qua.',
+  `about_body` = 'Trên con đường trở thành food reviewer không có dấu chân của kẻ lười ăn uống.',
   `updated_at` = '2026-07-21 19:39:15'
 WHERE `id` = 'main';
 

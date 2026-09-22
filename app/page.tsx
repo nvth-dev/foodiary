@@ -85,7 +85,7 @@ const maxSuggestionMessageLength = 1_200;
 const minSuggestionMessageLength = 5;
 const fallbackAbout: BlogAbout = {
   title: "Mỗi tuần một câu chuyện ngon.",
-  body: "Một email nhỏ về quán mới, món ngon và những góc phố mình vừa đi qua.",
+  body: "Trên con đường trở thành food reviewer không có dấu chân của kẻ lười ăn uống.",
 };
 
 async function requestSuggestionFormConfig(): Promise<{ formToken: string; turnstileSiteKey: string }> {
