@@ -755,7 +755,14 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
           <p className="hero-intro">
             Những quán mình đã ghé, những món khiến mình nhớ và vài câu chuyện nhỏ quanh bàn ăn.
           </p>
-          <a className="explore" href="#reviews">Khám phá các quán <span aria-hidden="true">↘</span></a>
+          <a className="explore" href="#reviews">
+            Khám phá các quán
+            <span aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M5 5 19 19M19 7v12H7" />
+              </svg>
+            </span>
+          </a>
           <dl className="stats" aria-label="Thống kê blog">
             <div><dt>{stats.places}</dt><dd>Quán đã ăn</dd></div>
             <div><dt>{stats.areas}</dt><dd>Khu vực</dd></div>
@@ -771,7 +778,11 @@ export function FoodBlog({ adminMode = false, editorOnly = false, initialEditorS
               <strong>{featuredSpot.name}</strong>
               <small>{featuredSpot.excerpt}</small>
             </span>
-            <span className="round-arrow" aria-hidden="true">↗</span>
+            <span className="round-arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path d="M7 17 17 7M7 7h10v10" />
+              </svg>
+            </span>
           </button>
         ) : (
           <div className="hero-feature hero-feature-empty" role="status" aria-live="polite">
